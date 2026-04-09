@@ -27,31 +27,32 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- FUNÇÃO PARA GERAR PDF ---
-def gerar_pdf(df, titulo, autor):
+# --- FUNÇÃO PARA GERAR PDF (CORRIGIDA) ---
+def gerar_pdf(df, titulo):
     pdf = FPDF()
     pdf.add_page()
     
-    # Cabeçalho Institucional
-    pdf.set_font("Arial", 'B', 16)
+    # Tentar usar Arial, caso contrário usa Helvetica (padrão)
+    pdf.set_font("Helvetica", 'B', 16)
     pdf.cell(200, 10, "Relatorio de Analise Multicriterio - TOPSIS", ln=True, align='C')
-    pdf.set_font("Arial", 'I', 12)
+    
+    pdf.set_font("Helvetica", 'I', 12)
     pdf.cell(200, 10, "Iniciacao Cientifica Ensino Medio - UTFPR", ln=True, align='C')
     pdf.ln(10)
     
     # Informações do Projeto
-    pdf.set_font("Arial", 'B', 11)
+    pdf.set_font("Helvetica", 'B', 11)
     pdf.cell(0, 7, f"Titulo: {titulo}", ln=True)
-    pdf.set_font("Arial", '', 11)
+    pdf.set_font("Helvetica", '', 11)
     pdf.cell(0, 7, f"Academico: Eduardo Fonseca Silveira", ln=True)
     pdf.cell(0, 7, f"Professoras Responsaveis: Fernanda C. Zola e Daiane M. G. Chiroli", ln=True)
     pdf.cell(0, 7, f"Data: {datetime.datetime.now().strftime('%d/%m/%Y %H:%M')}", ln=True)
     pdf.ln(5)
     
     # Tabela de Resultados
-    pdf.set_font("Arial", 'B', 12)
+    pdf.set_font("Helvetica", 'B', 12)
     pdf.cell(0, 10, "Ranking de Alternativas:", ln=True)
-    pdf.set_font("Arial", '', 10)
+    pdf.set_font("Helvetica", '', 10)
     
     # Cabeçalho da Tabela
     pdf.cell(20, 10, "Rank", 1)
@@ -66,14 +67,15 @@ def gerar_pdf(df, titulo, autor):
         pdf.cell(40, 10, f"{row['Score TOPSIS']:.4f}", 1)
         pdf.ln()
         
-    return bytes(pdf.output())
+    # .output() sem argumentos na FPDF2 retorna uma string de bytes (latin-1) 
+    # ou podemos usar dest='S' para garantir o retorno como string/bytes
+    return pdf.output(dest='S').encode('latin-1')
 
 # --- SIDEBAR ---
 st.sidebar.image("https://portal.utfpr.edu.br/icones/cabecalho/logo-utfpr/@@images/image.png", width=180)
 st.sidebar.markdown("---")
 st.sidebar.subheader("📌 Iniciação Científica")
 
-# Cabeçalho Atualizado na Sidebar
 st.sidebar.markdown("""
 **Iniciação Científica Ensino Médio** **Instituição:** UTFPR  
 **Acadêmico:** Eduardo Fonseca Silveira  
@@ -134,7 +136,7 @@ def executar_topsis(df, w, t):
     s_neg = np.sqrt(((weighted - v_neg)**2).sum(axis=1))
     return s_neg / (s_pos + s_neg + 1e-9)
 
-# --- PROCESSAMENTO E BOTÕES ---
+# --- PROCESSAMENTO ---
 st.markdown("---")
 if st.button("📊 PROCESSAR RANKING FINAL"):
     scores = executar_topsis(df_base, pesos_norm, tipos)
@@ -142,27 +144,24 @@ if st.button("📊 PROCESSAR RANKING FINAL"):
     ranking = df_base.sort_values(by='Score TOPSIS', ascending=False).reset_index(drop=True)
     ranking.index += 1
     
+    st.session_state['resultado'] = ranking
+    
     st.balloons()
     st.success(f"Melhor alternativa: **{ranking.iloc[0]['Alternativa']}**")
-    
     st.dataframe(ranking, use_container_width=True)
     st.bar_chart(ranking.set_index('Alternativa')['Score TOPSIS'])
 
-    # --- BOTÕES DE DOWNLOAD LADO A LADO ---
+# --- ÁREA DE DOWNLOAD ---
+if 'resultado' in st.session_state:
     col_btn1, col_btn2 = st.columns(2)
-    
     with col_btn1:
-        csv = ranking.to_csv(index=False).encode('utf-8')
+        csv = st.session_state['resultado'].to_csv(index=False).encode('utf-8')
         st.download_button("📥 Baixar CSV", csv, "resultado.csv", "text/csv")
-        
     with col_btn2:
-        # Gerando os bytes do PDF com as informações atualizadas
-        pdf_output = gerar_pdf(ranking, titulo_projeto, "Eduardo Fonseca Silveira")
-        st.download_button(
-            label="📄 Gerar Relatório PDF",
-            data=pdf_output,
-            file_name="relatorio_topsis.pdf",
-            mime="application/pdf"
-        )
+        try:
+            pdf_output = gerar_pdf(st.session_state['resultado'], titulo_projeto)
+            st.download_button("📄 Gerar Relatório PDF", pdf_output, "relatorio_topsis.pdf", "application/pdf")
+        except Exception as e:
+            st.error(f"Erro ao gerar PDF: {e}")
 
 st.caption("Eduardo Fonseca Silveira | UTFPR 2026")
