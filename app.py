@@ -11,7 +11,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- ESTILIZAÇÃO CSS ---
+# --- ESTILIZAÇÃO CSS (Melhorado para Contraste e Mobile) ---
 st.markdown("""
     <style>
     .main { background-color: #f8f9fa; }
@@ -23,24 +23,38 @@ st.markdown("""
         color: white;
         font-weight: bold;
     }
+    /* Estilo para o card da Sidebar */
+    .sidebar-card {
+        background-color: #ffffff;
+        padding: 15px;
+        border-radius: 10px;
+        border-left: 5px solid #003d7a;
+        margin-bottom: 20px;
+        box-shadow: 0px 2px 4px rgba(0,0,0,0.1);
+    }
+    .sidebar-card h4 {
+        color: #003d7a;
+        margin-top: 0;
+    }
+    .sidebar-card p {
+        color: #333333;
+        font-size: 14px;
+        line-height: 1.4;
+        margin-bottom: 5px;
+    }
     [data-testid="stSidebar"] { background-color: #f0f2f6; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- FUNÇÃO PARA GERAR PDF (CORRIGIDA) ---
+# --- FUNÇÃO PARA GERAR PDF ---
 def gerar_pdf(df, titulo):
     pdf = FPDF()
     pdf.add_page()
-    
-    # Tentar usar Arial, caso contrário usa Helvetica (padrão)
     pdf.set_font("Helvetica", 'B', 16)
     pdf.cell(200, 10, "Relatorio de Analise Multicriterio - TOPSIS", ln=True, align='C')
-    
     pdf.set_font("Helvetica", 'I', 12)
     pdf.cell(200, 10, "Iniciacao Cientifica Ensino Medio - UTFPR", ln=True, align='C')
     pdf.ln(10)
-    
-    # Informações do Projeto
     pdf.set_font("Helvetica", 'B', 11)
     pdf.cell(0, 7, f"Titulo: {titulo}", ln=True)
     pdf.set_font("Helvetica", '', 11)
@@ -48,42 +62,35 @@ def gerar_pdf(df, titulo):
     pdf.cell(0, 7, f"Professoras Responsaveis: Fernanda C. Zola e Daiane M. G. Chiroli", ln=True)
     pdf.cell(0, 7, f"Data: {datetime.datetime.now().strftime('%d/%m/%Y %H:%M')}", ln=True)
     pdf.ln(5)
-    
-    # Tabela de Resultados
     pdf.set_font("Helvetica", 'B', 12)
     pdf.cell(0, 10, "Ranking de Alternativas:", ln=True)
     pdf.set_font("Helvetica", '', 10)
-    
-    # Cabeçalho da Tabela
     pdf.cell(20, 10, "Rank", 1)
     pdf.cell(100, 10, "Alternativa", 1)
     pdf.cell(40, 10, "Score", 1)
     pdf.ln()
-    
-    # Dados
     for i, row in df.iterrows():
         pdf.cell(20, 10, str(i), 1)
         pdf.cell(100, 10, str(row['Alternativa']), 1)
         pdf.cell(40, 10, f"{row['Score TOPSIS']:.4f}", 1)
         pdf.ln()
-        
-    # .output() sem argumentos na FPDF2 retorna uma string de bytes (latin-1) 
-    # ou podemos usar dest='S' para garantir o retorno como string/bytes
     return pdf.output(dest='S').encode('latin-1')
 
-# --- SIDEBAR ---
+# --- SIDEBAR (Com Contraste Melhorado) ---
 st.sidebar.image("https://portal.utfpr.edu.br/icones/cabecalho/logo-utfpr/@@images/image.png", width=180)
 st.sidebar.markdown("---")
-st.sidebar.subheader("📌 Iniciação Científica")
 
-st.sidebar.markdown("""
-**Iniciação Científica Ensino Médio** **Instituição:** UTFPR  
-**Acadêmico:** Eduardo Fonseca Silveira  
-
-**Professoras Responsáveis:**
-* Fernanda Cavicchioli Zola  
-* Daiane Maria De Genaro Chiroli
-""")
+# Card com informações em alto contraste
+st.sidebar.markdown(f"""
+    <div class="sidebar-card">
+        <h4>📌 Iniciação Científica</h4>
+        <p><b>Instituição:</b> UTFPR</p>
+        <p><b>Acadêmico:</b><br>Eduardo Fonseca Silveira</p>
+        <hr style="margin: 10px 0;">
+        <p><b>Professoras Responsáveis:</b></p>
+        <p style="font-size: 13px;">• Fernanda Cavicchioli Zola<br>• Daiane Maria De Genaro Chiroli</p>
+    </div>
+    """, unsafe_allow_html=True)
 
 st.sidebar.info("O sistema normaliza automaticamente os pesos caso a soma seja diferente de 1.")
 
@@ -104,7 +111,6 @@ for i in range(qtd_criterios):
         tipo = st.selectbox(f"Tipo C{i+1}", ["lucro", "custo"], key=f"t_{i}")
         nomes_crit.append(nome); pesos_brutos.append(peso); tipos.append(tipo)
 
-# Normalização de Pesos
 soma_p = sum(pesos_brutos)
 pesos_norm = [p/soma_p for p in pesos_brutos] if soma_p > 0 else [1/qtd_criterios]*qtd_criterios
 
@@ -143,9 +149,7 @@ if st.button("📊 PROCESSAR RANKING FINAL"):
     df_base['Score TOPSIS'] = scores
     ranking = df_base.sort_values(by='Score TOPSIS', ascending=False).reset_index(drop=True)
     ranking.index += 1
-    
     st.session_state['resultado'] = ranking
-    
     st.balloons()
     st.success(f"Melhor alternativa: **{ranking.iloc[0]['Alternativa']}**")
     st.dataframe(ranking, use_container_width=True)
