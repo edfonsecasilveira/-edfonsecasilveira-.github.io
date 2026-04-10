@@ -88,7 +88,7 @@ st.sidebar.markdown(f"""
         <p><b>Acadêmico:</b><br>Eduardo Fonseca Silveira</p>
         <hr style="margin: 10px 0;">
         <p><b>Professoras Responsáveis:</b></p>
-        <p style="font-size: 13px;">• Fernanda Cavicchioli Zola<br>• Daiane Maria De Genaro Chiroli</p>
+        <p style="font-size: 13px;">•Dra Fernanda Cavicchioli Zola<br>•Dra Daiane Maria De Genaro Chiroli</p>
     </div>
     """, unsafe_allow_html=True)
 
