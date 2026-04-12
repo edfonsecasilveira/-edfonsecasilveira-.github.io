@@ -37,20 +37,26 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- FUNÇÃO PARA GERAR PDF ---
+# --- FUNÇÃO PARA GERAR PDF COMPLETO ---
 def gerar_pdf(ranking, matrizes, titulo):
     pdf = FPDF()
     pdf.add_page()
+    
+    # Cabeçalho
     pdf.set_font("Helvetica", 'B', 16)
     pdf.cell(200, 10, "Relatorio Detalhado TOPSIS", ln=True, align='C')
     pdf.set_font("Helvetica", 'I', 10)
     pdf.cell(200, 10, "UTFPR - Iniciacao Cientifica Ensino Medio", ln=True, align='C')
     pdf.ln(5)
+
+    # Info Projeto
     pdf.set_font("Helvetica", 'B', 11)
     pdf.cell(0, 7, f"Analise: {titulo}", ln=True)
     pdf.set_font("Helvetica", '', 10)
     pdf.cell(0, 7, f"Academico: Eduardo Fonseca Silveira | Data: {datetime.datetime.now().strftime('%d/%m/%Y')}", ln=True)
     pdf.ln(5)
+
+    # Ranking Final
     pdf.set_font("Helvetica", 'B', 12)
     pdf.cell(0, 10, "1. Ranking Final", ln=True)
     pdf.set_font("Helvetica", '', 9)
@@ -59,6 +65,13 @@ def gerar_pdf(ranking, matrizes, titulo):
         pdf.cell(20, 8, str(i), 1)
         pdf.cell(100, 8, str(row['Alternativa']), 1)
         pdf.cell(40, 8, f"{row['Score TOPSIS']:.4f}", 1); pdf.ln()
+    
+    pdf.ln(10)
+    pdf.set_font("Helvetica", 'B', 12)
+    pdf.cell(0, 10, "2. Matrizes Intermediarias (Resumo)", ln=True)
+    pdf.set_font("Helvetica", '', 8)
+    pdf.multi_cell(0, 5, "As matrizes de decisao normalizada, ponderada e as distancias euclidianas foram processadas conforme o rigor matematico do metodo TOPSIS.")
+    
     return pdf.output(dest='S').encode('latin-1')
 
 # --- SIDEBAR ---
@@ -84,13 +97,110 @@ with st.expander("1. Configurações Iniciais", expanded=True):
     qtd_a = c2.number_input("Qtd de Alternativas", 2, 50, 3)
 
 st.header("2. Critérios e Pesos")
-
-# AVISO DE NORMALIZAÇÃO
-st.warning("⚠️ **Nota sobre os Pesos:** Independentemente dos valores inseridos, o sistema irá normalizá-los para que a soma total seja igual a 1 (100%). Isso garante que a importância relativa entre os critérios seja mantida matematicamente.")
-
+st.info("💡 Agora você pode usar pontos para números decimais (ex: 1.50 ou 0.75).")
 nomes_crit, pesos_brutos, tipos = [], [], []
 cols = st.columns(qtd_c)
 for i in range(qtd_c):
     with cols[i]:
         n = st.text_input(f"C{i+1}", f"Critério {i+1}", key=f"nc_{i}")
-        p = st.number_input(f"Peso C{i+1}", 0.0, 100.0, 1.0, step=0.01, format="%.2f", key=f"
+        # AJURTE 1: Permitir decimais com step 0.01 e formato float
+        p = st.number_input(f"Peso C{i+1}", 0.0, 100.0, 1.0, step=0.01, format="%.2f", key=f"p_{i}")
+        t = st.selectbox(f"Objetivo C{i+1}", ["lucro", "custo"], key=f"t_{i}")
+        nomes_crit.append(n); pesos_brutos.append(p); tipos.append(t)
+
+soma_p = sum(pesos_brutos)
+pesos_norm = [p/soma_p for p in pesos_brutos] if soma_p > 0 else [1/qtd_c]*qtd_c
+
+st.header("3. Matriz de Decisão")
+dados = []
+for j in range(qtd_a):
+    row = st.columns([2] + [1] * qtd_c)
+    nome_alt = row[0].text_input(f"Alternativa {j+1}", f"Opção {j+1}", key=f"alt_{j}")
+    val_linha = [nome_alt]
+    for i in range(qtd_c):
+        # AJURTE 2: Permitir decimais nos dados das alternativas
+        v = row[i+1].number_input(f"{nomes_crit[i]}", value=0.0, step=0.01, format="%.2f", key=f"v_{j}_{i}")
+        val_linha.append(v)
+    dados.append(val_linha)
+
+df_base = pd.DataFrame(dados, columns=["Alternativa"] + nomes_crit)
+
+# --- ENGINE TOPSIS COM MATRIZES INTERMEDIÁRIAS ---
+def executar_topsis_completo(df, w, t):
+    # 1. Matriz Original
+    matrix = df.drop(columns=['Alternativa']).values.astype(float)
+    
+    # 2. Normalização
+    norm = matrix / np.sqrt((matrix**2).sum(axis=0) + 1e-9)
+    
+    # 3. Ponderação
+    weighted = norm * w
+    
+    # 4. Soluções Ideais
+    v_pos, v_neg = [], []
+    for i in range(len(t)):
+        if t[i] == 'lucro':
+            v_pos.append(np.max(weighted[:, i]))
+            v_neg.append(np.min(weighted[:, i]))
+        else:
+            v_pos.append(np.min(weighted[:, i]))
+            v_neg.append(np.max(weighted[:, i]))
+    
+    # 5. Distâncias
+    s_pos = np.sqrt(((weighted - v_pos)**2).sum(axis=1))
+    s_neg = np.sqrt(((weighted - v_neg)**2).sum(axis=1))
+    
+    # 6. Score Final
+    scores = s_neg / (s_pos + s_neg + 1e-9)
+    
+    # Organizar dicionário de matrizes para o usuário ver
+    intermediarias = {
+        "Normalizada": pd.DataFrame(norm, columns=nomes_crit),
+        "Ponderada": pd.DataFrame(weighted, columns=nomes_crit),
+        "Ideais": pd.DataFrame([v_pos, v_neg], columns=nomes_crit, index=["Ideal (+)", "Anti-Ideal (-)"]),
+        "Distâncias": pd.DataFrame({"S+ (Ideal)": s_pos, "S- (Anti-Ideal)": s_neg})
+    }
+    return scores, intermediarias
+
+# --- PROCESSAMENTO ---
+st.markdown("---")
+if st.button("📊 EXECUTAR ANÁLISE COMPLETA"):
+    scores, matrizes = executar_topsis_completo(df_base, pesos_norm, tipos)
+    
+    df_base['Score TOPSIS'] = scores
+    ranking = df_base.sort_values(by='Score TOPSIS', ascending=False).reset_index(drop=True)
+    ranking.index += 1
+    
+    st.session_state['resultado'] = ranking
+    st.session_state['matrizes'] = matrizes
+    
+    st.balloons()
+    st.success(f"🏆 Melhor Escolha: **{ranking.iloc[0]['Alternativa']}**")
+    
+    # Mostrar Ranking
+    st.subheader("🏁 Ranking Final")
+    st.dataframe(ranking.style.format({"Score TOPSIS": "{:.4f}"}), use_container_width=True)
+
+    # AJUSTE 3: Exibir Matrizes Intermediárias na Tela
+    with st.expander("📂 Ver Memória de Cálculo (Matrizes Intermediárias)"):
+        st.write("**Matriz Normalizada**")
+        st.dataframe(matrizes["Normalizada"])
+        st.write("**Matriz Ponderada (Pesos Aplicados)**")
+        st.dataframe(matrizes["Ponderada"])
+        st.write("**Soluções Ideais**")
+        st.dataframe(matrizes["Ideais"])
+        st.write("**Distâncias Euclidianas**")
+        st.dataframe(matrizes["Distâncias"])
+
+# --- DOWNLOADS ---
+if 'resultado' in st.session_state:
+    c_down1, c_down2 = st.columns(2)
+    with c_down1:
+        csv = st.session_state['resultado'].to_csv(index=False).encode('utf-8')
+        st.download_button("📥 Baixar CSV do Ranking", csv, "ranking.csv", "text/csv")
+    with c_down2:
+        pdf_out = gerar_pdf(st.session_state['resultado'], st.session_state['matrizes'], titulo_projeto)
+        st.download_button("📄 Baixar Relatório Completo (PDF)", pdf_out, "relatorio_topsis.pdf", "application/pdf")
+
+st.markdown("---")
+st.caption("Eduardo Fonseca Silveira | UTFPR 2026")
