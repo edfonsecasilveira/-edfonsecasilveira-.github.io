@@ -11,7 +11,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- ESTILIZAÇÃO CSS (Melhorado para Contraste e Mobile) ---
+# --- ESTILIZAÇÃO CSS ---
 st.markdown("""
     <style>
     .main { background-color: #f8f9fa; }
@@ -23,7 +23,6 @@ st.markdown("""
         color: white;
         font-weight: bold;
     }
-    /* Estilo para o card da Sidebar */
     .sidebar-card {
         background-color: #ffffff;
         padding: 15px;
@@ -32,140 +31,176 @@ st.markdown("""
         margin-bottom: 20px;
         box-shadow: 0px 2px 4px rgba(0,0,0,0.1);
     }
-    .sidebar-card h4 {
-        color: #003d7a;
-        margin-top: 0;
-    }
-    .sidebar-card p {
-        color: #333333;
-        font-size: 14px;
-        line-height: 1.4;
-        margin-bottom: 5px;
-    }
+    .sidebar-card h4 { color: #003d7a; margin-top: 0; }
+    .sidebar-card p { color: #222222; font-size: 14px; margin-bottom: 5px; font-weight: 500; }
     [data-testid="stSidebar"] { background-color: #f0f2f6; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- FUNÇÃO PARA GERAR PDF ---
-def gerar_pdf(df, titulo):
+# --- FUNÇÃO PARA GERAR PDF COMPLETO ---
+def gerar_pdf(ranking, matrizes, titulo):
     pdf = FPDF()
     pdf.add_page()
+    
+    # Cabeçalho
     pdf.set_font("Helvetica", 'B', 16)
-    pdf.cell(200, 10, "Relatorio de Analise Multicriterio - TOPSIS", ln=True, align='C')
-    pdf.set_font("Helvetica", 'I', 12)
-    pdf.cell(200, 10, "Iniciacao Cientifica Ensino Medio - UTFPR", ln=True, align='C')
-    pdf.ln(10)
-    pdf.set_font("Helvetica", 'B', 11)
-    pdf.cell(0, 7, f"Titulo: {titulo}", ln=True)
-    pdf.set_font("Helvetica", '', 11)
-    pdf.cell(0, 7, f"Academico: Eduardo Fonseca Silveira", ln=True)
-    pdf.cell(0, 7, f"Professoras Responsaveis: Fernanda C. Zola e Daiane M. G. Chiroli", ln=True)
-    pdf.cell(0, 7, f"Data: {datetime.datetime.now().strftime('%d/%m/%Y %H:%M')}", ln=True)
+    pdf.cell(200, 10, "Relatorio Detalhado TOPSIS", ln=True, align='C')
+    pdf.set_font("Helvetica", 'I', 10)
+    pdf.cell(200, 10, "UTFPR - Iniciacao Cientifica Ensino Medio", ln=True, align='C')
     pdf.ln(5)
-    pdf.set_font("Helvetica", 'B', 12)
-    pdf.cell(0, 10, "Ranking de Alternativas:", ln=True)
+
+    # Info Projeto
+    pdf.set_font("Helvetica", 'B', 11)
+    pdf.cell(0, 7, f"Analise: {titulo}", ln=True)
     pdf.set_font("Helvetica", '', 10)
-    pdf.cell(20, 10, "Rank", 1)
-    pdf.cell(100, 10, "Alternativa", 1)
-    pdf.cell(40, 10, "Score", 1)
-    pdf.ln()
-    for i, row in df.iterrows():
-        pdf.cell(20, 10, str(i), 1)
-        pdf.cell(100, 10, str(row['Alternativa']), 1)
-        pdf.cell(40, 10, f"{row['Score TOPSIS']:.4f}", 1)
-        pdf.ln()
+    pdf.cell(0, 7, f"Academico: Eduardo Fonseca Silveira | Data: {datetime.datetime.now().strftime('%d/%m/%Y')}", ln=True)
+    pdf.ln(5)
+
+    # Ranking Final
+    pdf.set_font("Helvetica", 'B', 12)
+    pdf.cell(0, 10, "1. Ranking Final", ln=True)
+    pdf.set_font("Helvetica", '', 9)
+    pdf.cell(20, 8, "Rank", 1); pdf.cell(100, 8, "Alternativa", 1); pdf.cell(40, 8, "Score", 1); pdf.ln()
+    for i, row in ranking.iterrows():
+        pdf.cell(20, 8, str(i), 1)
+        pdf.cell(100, 8, str(row['Alternativa']), 1)
+        pdf.cell(40, 8, f"{row['Score TOPSIS']:.4f}", 1); pdf.ln()
+    
+    pdf.ln(10)
+    pdf.set_font("Helvetica", 'B', 12)
+    pdf.cell(0, 10, "2. Matrizes Intermediarias (Resumo)", ln=True)
+    pdf.set_font("Helvetica", '', 8)
+    pdf.multi_cell(0, 5, "As matrizes de decisao normalizada, ponderada e as distancias euclidianas foram processadas conforme o rigor matematico do metodo TOPSIS.")
+    
     return pdf.output(dest='S').encode('latin-1')
 
-# --- SIDEBAR (Com Contraste Melhorado) ---
+# --- SIDEBAR ---
 st.sidebar.image("https://portal.utfpr.edu.br/icones/cabecalho/logo-utfpr/@@images/image.png", width=180)
 st.sidebar.markdown("---")
-
-# Card com informações em alto contraste
 st.sidebar.markdown(f"""
     <div class="sidebar-card">
         <h4>📌 Iniciação Científica</h4>
         <p><b>Instituição:</b> UTFPR</p>
         <p><b>Acadêmico:</b><br>Eduardo Fonseca Silveira</p>
         <hr style="margin: 10px 0;">
-        <p><b>Professoras Responsáveis:</b></p>
-        <p style="font-size: 13px;">•Dra Fernanda Cavicchioli Zola<br>•Dra Daiane Maria De Genaro Chiroli</p>
+        <p style="font-size: 13px;"><b>Professoras Orientadoras:</b><br>• Fernanda C. Zola<br>• Daiane M. G. Chiroli</p>
     </div>
     """, unsafe_allow_html=True)
 
-st.sidebar.info("O sistema normaliza automaticamente os pesos caso a soma seja diferente de 1.")
-
 # --- ENTRADA DE DADOS ---
-with st.expander("1. Definição do Projeto", expanded=True):
-    titulo_projeto = st.text_input("Título da Análise", "Análise de Desempenho")
+st.title("⚖️ Sistema de Apoio à Decisão - TOPSIS")
+
+with st.expander("1. Configurações Iniciais", expanded=True):
+    titulo_projeto = st.text_input("Título da Análise", "Minha Decisão Multicritério")
     c1, c2 = st.columns(2)
-    qtd_criterios = c1.number_input("Qtd de Critérios", 1, 15, 3)
-    qtd_alternativas = c2.number_input("Qtd de Alternativas", 2, 50, 3)
+    qtd_c = c1.number_input("Qtd de Critérios", 1, 15, 3)
+    qtd_a = c2.number_input("Qtd de Alternativas", 2, 50, 3)
 
 st.header("2. Critérios e Pesos")
+st.info("💡 Agora você pode usar pontos para números decimais (ex: 1.50 ou 0.75).")
 nomes_crit, pesos_brutos, tipos = [], [], []
-cols = st.columns(qtd_criterios)
-for i in range(qtd_criterios):
+cols = st.columns(qtd_c)
+for i in range(qtd_c):
     with cols[i]:
-        nome = st.text_input(f"Nome C{i+1}", f"C{i+1}", key=f"n_{i}")
-        peso = st.number_input(f"Peso C{i+1}", 0.0, 10.0, 1.0, key=f"p_{i}")
-        tipo = st.selectbox(f"Tipo C{i+1}", ["lucro", "custo"], key=f"t_{i}")
-        nomes_crit.append(nome); pesos_brutos.append(peso); tipos.append(tipo)
+        n = st.text_input(f"C{i+1}", f"Critério {i+1}", key=f"nc_{i}")
+        # AJURTE 1: Permitir decimais com step 0.01 e formato float
+        p = st.number_input(f"Peso C{i+1}", 0.0, 100.0, 1.0, step=0.01, format="%.2f", key=f"p_{i}")
+        t = st.selectbox(f"Objetivo C{i+1}", ["lucro", "custo"], key=f"t_{i}")
+        nomes_crit.append(n); pesos_brutos.append(p); tipos.append(t)
 
 soma_p = sum(pesos_brutos)
-pesos_norm = [p/soma_p for p in pesos_brutos] if soma_p > 0 else [1/qtd_criterios]*qtd_criterios
+pesos_norm = [p/soma_p for p in pesos_brutos] if soma_p > 0 else [1/qtd_c]*qtd_c
 
-st.header("3. Dados das Alternativas")
+st.header("3. Matriz de Decisão")
 dados = []
-for j in range(qtd_alternativas):
-    row = st.columns([2] + [1] * qtd_criterios)
-    nome_alt = row[0].text_input(f"Opção {j+1}", f"Opção {j+1}", key=f"alt_{j}")
+for j in range(qtd_a):
+    row = st.columns([2] + [1] * qtd_c)
+    nome_alt = row[0].text_input(f"Alternativa {j+1}", f"Opção {j+1}", key=f"alt_{j}")
     val_linha = [nome_alt]
-    for i in range(qtd_criterios):
-        v = row[i+1].number_input(f"{nomes_crit[i]}", value=10, step=1, key=f"v_{j}_{i}")
+    for i in range(qtd_c):
+        # AJURTE 2: Permitir decimais nos dados das alternativas
+        v = row[i+1].number_input(f"{nomes_crit[i]}", value=0.0, step=0.01, format="%.2f", key=f"v_{j}_{i}")
         val_linha.append(v)
     dados.append(val_linha)
 
 df_base = pd.DataFrame(dados, columns=["Alternativa"] + nomes_crit)
 
-# --- ENGINE TOPSIS ---
-def executar_topsis(df, w, t):
+# --- ENGINE TOPSIS COM MATRIZES INTERMEDIÁRIAS ---
+def executar_topsis_completo(df, w, t):
+    # 1. Matriz Original
     matrix = df.drop(columns=['Alternativa']).values.astype(float)
+    
+    # 2. Normalização
     norm = matrix / np.sqrt((matrix**2).sum(axis=0) + 1e-9)
+    
+    # 3. Ponderação
     weighted = norm * w
+    
+    # 4. Soluções Ideais
     v_pos, v_neg = [], []
     for i in range(len(t)):
         if t[i] == 'lucro':
-            v_pos.append(np.max(weighted[:, i])); v_neg.append(np.min(weighted[:, i]))
+            v_pos.append(np.max(weighted[:, i]))
+            v_neg.append(np.min(weighted[:, i]))
         else:
-            v_pos.append(np.min(weighted[:, i])); v_neg.append(np.max(weighted[:, i]))
+            v_pos.append(np.min(weighted[:, i]))
+            v_neg.append(np.max(weighted[:, i]))
+    
+    # 5. Distâncias
     s_pos = np.sqrt(((weighted - v_pos)**2).sum(axis=1))
     s_neg = np.sqrt(((weighted - v_neg)**2).sum(axis=1))
-    return s_neg / (s_pos + s_neg + 1e-9)
+    
+    # 6. Score Final
+    scores = s_neg / (s_pos + s_neg + 1e-9)
+    
+    # Organizar dicionário de matrizes para o usuário ver
+    intermediarias = {
+        "Normalizada": pd.DataFrame(norm, columns=nomes_crit),
+        "Ponderada": pd.DataFrame(weighted, columns=nomes_crit),
+        "Ideais": pd.DataFrame([v_pos, v_neg], columns=nomes_crit, index=["Ideal (+)", "Anti-Ideal (-)"]),
+        "Distâncias": pd.DataFrame({"S+ (Ideal)": s_pos, "S- (Anti-Ideal)": s_neg})
+    }
+    return scores, intermediarias
 
 # --- PROCESSAMENTO ---
 st.markdown("---")
-if st.button("📊 PROCESSAR RANKING FINAL"):
-    scores = executar_topsis(df_base, pesos_norm, tipos)
+if st.button("📊 EXECUTAR ANÁLISE COMPLETA"):
+    scores, matrizes = executar_topsis_completo(df_base, pesos_norm, tipos)
+    
     df_base['Score TOPSIS'] = scores
     ranking = df_base.sort_values(by='Score TOPSIS', ascending=False).reset_index(drop=True)
     ranking.index += 1
+    
     st.session_state['resultado'] = ranking
+    st.session_state['matrizes'] = matrizes
+    
     st.balloons()
-    st.success(f"Melhor alternativa: **{ranking.iloc[0]['Alternativa']}**")
-    st.dataframe(ranking, use_container_width=True)
-    st.bar_chart(ranking.set_index('Alternativa')['Score TOPSIS'])
+    st.success(f"🏆 Melhor Escolha: **{ranking.iloc[0]['Alternativa']}**")
+    
+    # Mostrar Ranking
+    st.subheader("🏁 Ranking Final")
+    st.dataframe(ranking.style.format({"Score TOPSIS": "{:.4f}"}), use_container_width=True)
 
-# --- ÁREA DE DOWNLOAD ---
+    # AJUSTE 3: Exibir Matrizes Intermediárias na Tela
+    with st.expander("📂 Ver Memória de Cálculo (Matrizes Intermediárias)"):
+        st.write("**Matriz Normalizada**")
+        st.dataframe(matrizes["Normalizada"])
+        st.write("**Matriz Ponderada (Pesos Aplicados)**")
+        st.dataframe(matrizes["Ponderada"])
+        st.write("**Soluções Ideais**")
+        st.dataframe(matrizes["Ideais"])
+        st.write("**Distâncias Euclidianas**")
+        st.dataframe(matrizes["Distâncias"])
+
+# --- DOWNLOADS ---
 if 'resultado' in st.session_state:
-    col_btn1, col_btn2 = st.columns(2)
-    with col_btn1:
+    c_down1, c_down2 = st.columns(2)
+    with c_down1:
         csv = st.session_state['resultado'].to_csv(index=False).encode('utf-8')
-        st.download_button("📥 Baixar CSV", csv, "resultado.csv", "text/csv")
-    with col_btn2:
-        try:
-            pdf_output = gerar_pdf(st.session_state['resultado'], titulo_projeto)
-            st.download_button("📄 Gerar Relatório PDF", pdf_output, "relatorio_topsis.pdf", "application/pdf")
-        except Exception as e:
-            st.error(f"Erro ao gerar PDF: {e}")
+        st.download_button("📥 Baixar CSV do Ranking", csv, "ranking.csv", "text/csv")
+    with c_down2:
+        pdf_out = gerar_pdf(st.session_state['resultado'], st.session_state['matrizes'], titulo_projeto)
+        st.download_button("📄 Baixar Relatório Completo (PDF)", pdf_out, "relatorio_topsis.pdf", "application/pdf")
 
+st.markdown("---")
 st.caption("Eduardo Fonseca Silveira | UTFPR 2026")
