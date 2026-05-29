@@ -167,3 +167,25 @@ if st.button("📊 PROCESSAR RANKING FINAL"):
         )
 
 st.caption("Eduardo Fonseca Silveira | UTFPR 2026")
+
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyB0Ee_p0c1BDFcYZoH4C_v46kH7cLBJSDs",
+  authDomain: "apppy-9675a.firebaseapp.com",
+  projectId: "apppy-9675a",
+  storageBucket: "apppy-9675a.firebasestorage.app",
+  messagingSenderId: "1022579734978",
+  appId: "1:1022579734978:web:d7a7ac0e0e84ac7fd5be5b",
+  measurementId: "G-4P42W63H32"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
