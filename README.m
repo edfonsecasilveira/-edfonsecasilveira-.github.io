@@ -44,7 +44,7 @@ st.markdown("""
 }
 
 .sidebar-card {
-    background-color: white;
+    background-color: gray;
     padding: 15px;
     border-radius: 10px;
     border-left: 5px solid #003d7a;
