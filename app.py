@@ -965,4 +965,5 @@ st.markdown("---")
 st.caption(
     "Eduardo Fonseca Silveira | UTFPR | 2026"
 )
-```
+
+
