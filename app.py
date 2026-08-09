@@ -1,9 +1,18 @@
+import subprocess
+import sys
+
+# Tenta importar a biblioteca da OpenAI. Se não existir, instala automaticamente.
+try:
+    from openai import OpenAI
+except ModuleNotFoundError:
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "openai"])
+    from openai import OpenAI
+
 import streamlit as st
 import pandas as pd
 import numpy as np
 from fpdf import FPDF
 import datetime
-from openai import OpenAI  # <-- Nova biblioteca para a IA
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(
@@ -73,7 +82,6 @@ def gerar_pdf(ranking, matrizes, titulo, analise_ia=""):
         pdf.set_font("Helvetica", 'B', 12)
         pdf.cell(0, 10, "2. Relatorio Interpretativo da IA", ln=True)
         pdf.set_font("Helvetica", '', 10)
-        # Substitui caracteres que podem quebrar o FPDF padrão (latin-1)
         texto_limpo = analise_ia.encode('latin-1', 'ignore').decode('latin-1')
         pdf.multi_cell(0, 5, texto_limpo)
     
@@ -90,7 +98,6 @@ def gerar_analise_ia(api_key, ranking_df, pesos, criterios, tipos):
     try:
         client = OpenAI(api_key=api_key)
         
-        # Monta um resumo do problema para enviar no Prompt
         resumo_problema = f"Critérios avaliados: {', '.join(criterios)}\n"
         resumo_problema += f"Pesos de cada critério: {pesos}\n"
         resumo_problema += f"Tipos (lucro/custo): {tipos}\n\n"
@@ -111,7 +118,6 @@ def gerar_analise_ia(api_key, ranking_df, pesos, criterios, tipos):
         Importante: Responda em português, use formatação Markdown simples e evite respostas muito longas. Não use emojis complexos ou caracteres especiais fora do padrão latino para não quebrar o PDF.
         """
         
-        # Chamada utilizando o modelo gpt-4o-mini (rápido e econômico)
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
@@ -120,12 +126,12 @@ def gerar_analise_ia(api_key, ranking_df, pesos, criterios, tipos):
             ],
             temperature=0.3
         )
-        return response.choices[0].message.content
+        return response.choices.message.content
     except Exception as e:
         return f"Erro ao conectar com a IA: {str(e)}"
 
 # --- SIDEBAR ---
-st.sidebar.image("https://portal.utfpr.edu.br/icones/cabecalho/logo-utfpr/@@images/image.png", width=180)
+st.sidebar.image("https://utfpr.edu.br", width=180)
 st.sidebar.markdown("---")
 
 # Configuração da API Key na Sidebar
@@ -225,7 +231,7 @@ if st.button("📊 EXECUTAR ANÁLISE COMPLETA"):
     st.subheader("🏁 Ranking Final")
     st.dataframe(ranking.style.format({"Score TOPSIS": "{:.4f}"}), use_container_width=True)
 
-    # --- NOVA SEÇÃO: RELATÓRIO DA IA ---
+    # --- RELATÓRIO DA IA ---
     if api_key_input:
         with st.spinner("🤖 IA analisando os resultados matemáticos..."):
             analise = gerar_analise_ia(api_key_input, ranking, pesos_brutos, nomes_crit, tipos)
