@@ -61,6 +61,11 @@ st.markdown("""
     font-size: 14px;
 }
 
+/* Classe para forçar texto preto */
+.custom-black {
+    color: #000000 !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -258,31 +263,31 @@ def gerar_analise_ia(
         resumo += ranking_df.to_string()
 
         prompt = f"""
-Você é um especialista em Análise de Decisão Multicritério (MCDA).
+ Você é um especialista em Análise de Decisão Multicritério (MCDA).
 
-Analise os resultados do método TOPSIS abaixo.
+ Analise os resultados do método TOPSIS abaixo.
 
-{resumo}
+ {resumo}
 
-Produza um relatório interpretativo curto, direto e acadêmico.
+ Produza um relatório interpretativo curto, direto e acadêmico.
 
-O relatório deve conter:
+ O relatório deve conter:
 
-1. Justificativa para a alternativa vencedora ter ficado em primeiro lugar,
-considerando os pesos dos critérios.
+ 1. Justificativa para a alternativa vencedora ter ficado em primeiro lugar,
+ considerando os pesos dos critérios.
 
-2. Identificação do critério que mais contribuiu para o resultado.
+ 2. Identificação do critério que mais contribuiu para o resultado.
 
-3. Uma conclusão ou recomendação prática.
+ 3. Uma conclusão ou recomendação prática.
 
-Escreva em português.
+ Escreva em português.
 
-Não seja excessivamente longo.
+ Não seja excessivamente longo.
 
-Utilize Markdown simples.
+ Utilize Markdown simples.
 
-Não utilize emojis.
-"""
+ Não utilize emojis.
+ """
 
         response = client.chat.completions.create(
             model="gpt-4o-mini",
@@ -465,20 +470,19 @@ st.sidebar.title("TOPSIS")
 
 st.sidebar.markdown("---")
 
-st.sidebar.subheader(
-    "Configuração da IA"
+# Substituímos subheader por markdown com classe para permitir emoji e estilo preto
+st.sidebar.markdown(
+    '<p class="custom-black" style="font-weight:700;font-size:16px;margin:0;">🤖 Configuração da IA</p>',
+    unsafe_allow_html=True
 )
 
-# Texto separado do campo
+st.sidebar.markdown("---")
+
+# Texto separado do campo (agora usando a classe custom-black)
 st.sidebar.markdown(
     """
-    <p style="
-        color: #111111;
-        font-weight: 600;
-        font-size: 14px;
-        margin-bottom: 5px;
-    ">
-        OpenAI API Key
+    <p class="custom-black" style="font-weight:600;font-size:14px;margin-bottom:5px;">
+        Insira sua OpenAI API Key
     </p>
     """,
     unsafe_allow_html=True
@@ -498,449 +502,4 @@ st.sidebar.markdown("---")
 st.sidebar.markdown(
     """
     <div class="sidebar-card">
-
-    <h4>Iniciação Científica</h4>
-
-    <p>
-    <b>Instituição:</b> UTFPR
-    </p>
-
-    <p>
-    <b>Acadêmico:</b><br>
-    Eduardo Fonseca Silveira
-    </p>
-
-    <p>
-    <b>Professoras Orientadoras:</b><br>
-    Fernanda C. Zola<br>
-    Daiane M. G. Chiroli
-    </p>
-
-    </div>
-    """,
-    unsafe_allow_html=True
-)
-
-
-# ============================================================
-# TÍTULO
-# ============================================================
-
-st.title(
-    "Sistema de Apoio à Decisão - TOPSIS"
-)
-
-st.write(
-    "Ferramenta para análise de decisão multicritério "
-    "utilizando o método TOPSIS."
-)
-
-
-# ============================================================
-# CONFIGURAÇÕES
-# ============================================================
-
-with st.expander(
-    "1. Configurações Iniciais",
-    expanded=True
-):
-
-    titulo_projeto = st.text_input(
-        "Título da Análise",
-        "Minha Decisão Multicritério"
-    )
-
-    col1, col2 = st.columns(2)
-
-    qtd_c = col1.number_input(
-        "Quantidade de Critérios",
-        min_value=1,
-        max_value=15,
-        value=3,
-        step=1
-    )
-
-    qtd_a = col2.number_input(
-        "Quantidade de Alternativas",
-        min_value=2,
-        max_value=50,
-        value=3,
-        step=1
-    )
-
-
-# ============================================================
-# CRITÉRIOS
-# ============================================================
-
-st.header("2. Critérios e Pesos")
-
-st.info(
-    "Utilize números decimais nos pesos, "
-    "como 1.50 ou 0.75."
-)
-
-nomes_crit = []
-pesos_brutos = []
-tipos = []
-
-cols = st.columns(qtd_c)
-
-for i in range(qtd_c):
-
-    with cols[i]:
-
-        nome = st.text_input(
-            f"C{i + 1}",
-            f"Critério {i + 1}",
-            key=f"nome_criterio_{i}"
-        )
-
-        peso = st.number_input(
-            f"Peso C{i + 1}",
-            min_value=0.0,
-            max_value=100.0,
-            value=1.0,
-            step=0.01,
-            format="%.2f",
-            key=f"peso_{i}"
-        )
-
-        tipo = st.selectbox(
-            f"Objetivo C{i + 1}",
-            ["lucro", "custo"],
-            key=f"tipo_{i}",
-            help=(
-                "Lucro: quanto maior, melhor. "
-                "Custo: quanto menor, melhor."
-            )
-        )
-
-        nomes_crit.append(nome)
-        pesos_brutos.append(peso)
-        tipos.append(tipo)
-
-
-# ============================================================
-# PESOS NORMALIZADOS
-# ============================================================
-
-soma_pesos = sum(
-    pesos_brutos
-)
-
-if soma_pesos > 0:
-
-    pesos_norm = [
-        peso / soma_pesos
-        for peso in pesos_brutos
-    ]
-
-else:
-
-    pesos_norm = [
-        1 / qtd_c
-        for _ in range(qtd_c)
-    ]
-
-
-with st.expander(
-    "Ver pesos normalizados"
-):
-
-    pesos_df = pd.DataFrame({
-        "Critério": nomes_crit,
-        "Peso Original": pesos_brutos,
-        "Peso Normalizado": pesos_norm,
-        "Tipo": tipos
-    })
-
-    st.dataframe(
-        pesos_df,
-        use_container_width=True
-    )
-
-
-# ============================================================
-# MATRIZ DE DECISÃO
-# ============================================================
-
-st.header("3. Matriz de Decisão")
-
-dados = []
-
-for j in range(qtd_a):
-
-    row = st.columns(
-        [2] + [1] * qtd_c
-    )
-
-    nome_alternativa = row[0].text_input(
-        f"Alternativa {j + 1}",
-        f"Opção {j + 1}",
-        key=f"alternativa_{j}"
-    )
-
-    valores = [
-        nome_alternativa
-    ]
-
-    for i in range(qtd_c):
-
-        valor = row[i + 1].number_input(
-            nomes_crit[i],
-            value=0.0,
-            step=0.01,
-            format="%.2f",
-            key=f"valor_{j}_{i}"
-        )
-
-        valores.append(valor)
-
-    dados.append(valores)
-
-
-df_base = pd.DataFrame(
-    dados,
-    columns=["Alternativa"] + nomes_crit
-)
-
-
-# ============================================================
-# VISUALIZAR MATRIZ
-# ============================================================
-
-with st.expander(
-    "Visualizar matriz de decisão"
-):
-
-    st.dataframe(
-        df_base,
-        use_container_width=True
-    )
-
-
-# ============================================================
-# EXECUTAR
-# ============================================================
-
-st.markdown("---")
-
-if st.button(
-    "EXECUTAR ANÁLISE COMPLETA"
-):
-
-    # Verificar pesos
-    if soma_pesos <= 0:
-
-        st.error(
-            "A soma dos pesos precisa ser maior que zero."
-        )
-
-        st.stop()
-
-    # Verificar critérios repetidos
-    if len(set(nomes_crit)) != len(nomes_crit):
-
-        st.error(
-            "Os nomes dos critérios precisam ser diferentes."
-        )
-
-        st.stop()
-
-    # TOPSIS
-    scores, matrizes = executar_topsis(
-        df_base,
-        pesos_norm,
-        tipos,
-        nomes_crit
-    )
-
-    # Ranking
-    resultado = df_base.copy()
-
-    resultado["Score TOPSIS"] = scores
-
-    ranking = (
-        resultado
-        .sort_values(
-            by="Score TOPSIS",
-            ascending=False
-        )
-        .reset_index(drop=True)
-    )
-
-    # Salvar na sessão
-    st.session_state["resultado"] = ranking
-    st.session_state["matrizes"] = matrizes
-
-    # ========================================================
-    # RESULTADO
-    # ========================================================
-
-    st.success(
-        f"Melhor escolha: "
-        f"**{ranking.iloc[0]['Alternativa']}**"
-    )
-
-    st.subheader(
-        "Ranking Final"
-    )
-
-    st.dataframe(
-        ranking.style.format({
-            "Score TOPSIS": "{:.4f}"
-        }),
-        use_container_width=True
-    )
-
-    # ========================================================
-    # IA
-    # ========================================================
-
-    if api_key_input:
-
-        with st.spinner(
-            "IA analisando os resultados..."
-        ):
-
-            analise = gerar_analise_ia(
-                api_key_input,
-                ranking,
-                pesos_brutos,
-                nomes_crit,
-                tipos
-            )
-
-        st.session_state[
-            "analise_ia"
-        ] = analise
-
-        st.subheader(
-            "Relatório Interpretativo da IA"
-        )
-
-        st.markdown(
-            analise
-        )
-
-    else:
-
-        st.session_state[
-            "analise_ia"
-        ] = ""
-
-        st.info(
-            "Insira sua OpenAI API Key na barra lateral "
-            "para gerar o relatório interpretativo."
-        )
-
-    # ========================================================
-    # MEMÓRIA DE CÁLCULO
-    # ========================================================
-
-    st.subheader(
-        "Memória de Cálculo"
-    )
-
-    with st.expander(
-        "Matriz Normalizada"
-    ):
-
-        st.dataframe(
-            matrizes["Normalizada"],
-            use_container_width=True
-        )
-
-    with st.expander(
-        "Matriz Ponderada"
-    ):
-
-        st.dataframe(
-            matrizes["Ponderada"],
-            use_container_width=True
-        )
-
-    with st.expander(
-        "Soluções Ideais"
-    ):
-
-        st.dataframe(
-            matrizes["Ideais"],
-            use_container_width=True
-        )
-
-    with st.expander(
-        "Distâncias Euclidianas"
-    ):
-
-        st.dataframe(
-            matrizes["Distâncias"],
-            use_container_width=True
-        )
-
-
-# ============================================================
-# DOWNLOADS
-# ============================================================
-
-if "resultado" in st.session_state:
-
-    st.markdown("---")
-
-    st.subheader(
-        "Exportar Resultados"
-    )
-
-    col1, col2 = st.columns(2)
-
-    # CSV
-    with col1:
-
-        csv = (
-            st.session_state["resultado"]
-            .to_csv(index=False)
-            .encode("utf-8")
-        )
-
-        st.download_button(
-            "Baixar Ranking em CSV",
-            data=csv,
-            file_name="ranking_topsis.csv",
-            mime="text/csv",
-            use_container_width=True
-        )
-
-    # PDF
-    with col2:
-
-        texto_ia = st.session_state.get(
-            "analise_ia",
-            ""
-        )
-
-        pdf_out = gerar_pdf(
-            st.session_state["resultado"],
-            titulo_projeto,
-            analise_ia=texto_ia
-        )
-
-        st.download_button(
-            "Baixar Relatório em PDF",
-            data=pdf_out,
-            file_name="relatorio_topsis.pdf",
-            mime="application/pdf",
-            use_container_width=True
-        )
-
-
-# ============================================================
-# RODAPÉ
-# ============================================================
-
-st.markdown("---")
-
-st.caption(
-    "Eduardo Fonseca Silveira | UTFPR | 2026"
-)
-```
+", unsafe_allow_html=True)
