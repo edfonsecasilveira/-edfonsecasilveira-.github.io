@@ -19,32 +19,72 @@ st.set_page_config(
 
 
 # ============================================================
-# ESTILIZAÇÃO
+# CSS
 # ============================================================
 
 st.markdown("""
 <style>
 
-.main {
-    background-color: #f8f9fa;
+/* ==========================================================
+   SIDEBAR
+   ========================================================== */
+
+[data-testid="stSidebar"] {
+    background-color: #f0f2f6 !important;
 }
 
-.stButton > button {
-    width: 100%;
-    border-radius: 8px;
-    height: 3.5em;
-    background-color: #003d7a;
-    color: white;
-    font-weight: bold;
+/* Força todos os textos da sidebar para escuro */
+[data-testid="stSidebar"] * {
+    color: #111111 !important;
 }
 
-.stButton > button:hover {
-    background-color: #0056a6;
-    color: white;
+/* Títulos */
+[data-testid="stSidebar"] h1,
+[data-testid="stSidebar"] h2,
+[data-testid="stSidebar"] h3,
+[data-testid="stSidebar"] h4 {
+    color: #003d7a !important;
 }
+
+/* Labels */
+[data-testid="stSidebar"] label {
+    color: #111111 !important;
+    font-weight: 600 !important;
+}
+
+/* Campo de texto */
+[data-testid="stSidebar"] input {
+    background-color: #ffffff !important;
+    color: #111111 !important;
+    border: 1px solid #777777 !important;
+    border-radius: 6px !important;
+}
+
+/* Texto digitado */
+[data-testid="stSidebar"] input[type="text"],
+[data-testid="stSidebar"] input[type="password"] {
+    color: #111111 !important;
+    background-color: #ffffff !important;
+}
+
+/* Placeholder */
+[data-testid="stSidebar"] input::placeholder {
+    color: #555555 !important;
+    opacity: 1 !important;
+}
+
+/* Texto de ajuda */
+[data-testid="stSidebar"] small {
+    color: #333333 !important;
+}
+
+
+/* ==========================================================
+   CARTÃO DA SIDEBAR
+   ========================================================== */
 
 .sidebar-card {
-    background-color: #ffffff;
+    background-color: #ffffff !important;
     padding: 15px;
     border-radius: 10px;
     border-left: 5px solid #003d7a;
@@ -52,27 +92,40 @@ st.markdown("""
     box-shadow: 0px 2px 4px rgba(0,0,0,0.1);
 }
 
+.sidebar-card * {
+    color: #222222 !important;
+}
+
 .sidebar-card h4 {
     color: #003d7a !important;
-    margin-top: 0;
 }
 
-.sidebar-card p,
-.sidebar-card span,
-.sidebar-card b {
-    color: #222222 !important;
-    font-size: 14px;
-    margin-bottom: 5px;
-    font-weight: 500;
+
+/* ==========================================================
+   BOTÕES
+   ========================================================== */
+
+.stButton > button {
+    width: 100%;
+    border-radius: 8px;
+    height: 3.5em;
+    background-color: #003d7a;
+    color: white !important;
+    font-weight: bold;
 }
 
-[data-testid="stSidebar"] {
-    background-color: #f0f2f6;
+.stButton > button:hover {
+    background-color: #0056a6;
+    color: white !important;
 }
 
-[data-testid="stSidebar"] label,
-[data-testid="stSidebar"] p {
-    color: #111111 !important;
+
+/* ==========================================================
+   GERAL
+   ========================================================== */
+
+.main {
+    background-color: #f8f9fa;
 }
 
 </style>
@@ -109,7 +162,7 @@ def gerar_pdf(ranking, matrizes, titulo, analise_ia=""):
 
     pdf.ln(5)
 
-    # Informações do projeto
+    # Informações
     pdf.set_font("Helvetica", "B", 11)
     pdf.cell(
         0,
@@ -129,7 +182,10 @@ def gerar_pdf(ranking, matrizes, titulo, analise_ia=""):
 
     pdf.ln(5)
 
-    # Ranking
+    # ========================================================
+    # RANKING
+    # ========================================================
+
     pdf.set_font("Helvetica", "B", 12)
     pdf.cell(
         0,
@@ -170,7 +226,10 @@ def gerar_pdf(ranking, matrizes, titulo, analise_ia=""):
 
         pdf.ln()
 
-    # Análise da IA
+    # ========================================================
+    # IA
+    # ========================================================
+
     if analise_ia:
 
         pdf.ln(5)
@@ -200,7 +259,10 @@ def gerar_pdf(ranking, matrizes, titulo, analise_ia=""):
             texto_limpo
         )
 
-    # Matrizes
+    # ========================================================
+    # MEMÓRIA DE CÁLCULO
+    # ========================================================
+
     pdf.ln(5)
 
     pdf.set_font("Helvetica", "B", 12)
@@ -388,19 +450,19 @@ def executar_topsis_completo(
     v_pos = np.array(v_pos)
     v_neg = np.array(v_neg)
 
-    # Distância até o ideal
+    # Distância ao ideal
     s_pos = np.sqrt(
         ((ponderada - v_pos) ** 2)
         .sum(axis=1)
     )
 
-    # Distância até o anti-ideal
+    # Distância ao anti-ideal
     s_neg = np.sqrt(
         ((ponderada - v_neg) ** 2)
         .sum(axis=1)
     )
 
-    # Coeficiente de proximidade
+    # Score TOPSIS
     scores = (
         s_neg /
         (s_pos + s_neg + 1e-12)
@@ -441,7 +503,6 @@ def executar_topsis_completo(
     return scores, intermediarias
 
 
-```python
 # ============================================================
 # SIDEBAR
 # ============================================================
@@ -452,14 +513,32 @@ st.sidebar.markdown("---")
 
 st.sidebar.subheader("Configuração da IA")
 
+# Texto separado do campo para garantir visibilidade
+st.sidebar.markdown(
+    """
+    <p style="
+        color: #111111 !important;
+        font-weight: 600 !important;
+        font-size: 14px !important;
+        margin-bottom: 5px !important;
+    ">
+        OpenAI API Key
+    </p>
+    """,
+    unsafe_allow_html=True
+)
+
+# Campo da API Key sem label padrão
 api_key_input = st.sidebar.text_input(
     "OpenAI API Key",
     type="password",
-    help="Insira sua chave da API da OpenAI."
+    label_visibility="collapsed",
+    placeholder="Cole sua chave aqui"
 )
 
 st.sidebar.markdown("---")
 
+# Informações
 st.sidebar.markdown(
     """
     <div class="sidebar-card">
@@ -485,99 +564,6 @@ st.sidebar.markdown(
     """,
     unsafe_allow_html=True
 )
-```
-
-E **adicione/substitua o CSS** no início do código por este:
-
-```python
-st.markdown("""
-<style>
-
-.main {
-    background-color: #f8f9fa;
-}
-
-/* Botões */
-.stButton > button {
-    width: 100%;
-    border-radius: 8px;
-    height: 3.5em;
-    background-color: #003d7a;
-    color: white;
-    font-weight: bold;
-}
-
-.stButton > button:hover {
-    background-color: #0056a6;
-    color: white;
-}
-
-/* Barra lateral */
-[data-testid="stSidebar"] {
-    background-color: #f0f2f6;
-}
-
-/* Textos da barra lateral */
-[data-testid="stSidebar"] p,
-[data-testid="stSidebar"] label,
-[data-testid="stSidebar"] span,
-[data-testid="stSidebar"] div {
-    color: #111111;
-}
-
-/* Títulos da barra lateral */
-[data-testid="stSidebar"] h1,
-[data-testid="stSidebar"] h2,
-[data-testid="stSidebar"] h3,
-[data-testid="stSidebar"] h4 {
-    color: #003d7a !important;
-}
-
-/* Campo da API Key */
-[data-testid="stSidebar"] input {
-    background-color: white !important;
-    color: #111111 !important;
-    border: 1px solid #999999 !important;
-}
-
-/* Texto dentro do campo */
-[data-testid="stSidebar"] input::placeholder {
-    color: #666666 !important;
-}
-
-/* Cartão de informações */
-.sidebar-card {
-    background-color: #ffffff;
-    padding: 15px;
-    border-radius: 10px;
-    border-left: 5px solid #003d7a;
-    margin-bottom: 20px;
-    box-shadow: 0px 2px 4px rgba(0,0,0,0.1);
-}
-
-.sidebar-card h4 {
-    color: #003d7a !important;
-    margin-top: 0;
-}
-
-.sidebar-card p,
-.sidebar-card b {
-    color: #222222 !important;
-    font-size: 14px;
-}
-
-</style>
-""", unsafe_allow_html=True)
-```
-
-Assim ficará:
-
-**Configuração da IA**
-
-`OpenAI API Key`
-`[ ••••••••••••••••• ]`
-
-com o texto **visível em preto**, fundo branco e **sem emojis**.
 
 
 # ============================================================
@@ -585,7 +571,7 @@ com o texto **visível em preto**, fundo branco e **sem emojis**.
 # ============================================================
 
 st.title(
-    "⚖️ Sistema de Apoio à Decisão - TOPSIS"
+    "Sistema de Apoio à Decisão - TOPSIS"
 )
 
 st.write(
@@ -634,7 +620,7 @@ with st.expander(
 st.header("2. Critérios e Pesos")
 
 st.info(
-    "💡 Utilize números decimais nos pesos, "
+    "Utilize números decimais nos pesos, "
     "como 1.50 ou 0.75."
 )
 
@@ -702,8 +688,8 @@ else:
     ]
 
 
-# Mostrar pesos normalizados
-with st.expander("⚖️ Ver pesos normalizados"):
+# Mostrar pesos
+with st.expander("Ver pesos normalizados"):
 
     pesos_df = pd.DataFrame({
         "Critério": nomes_crit,
@@ -767,7 +753,9 @@ df_base = pd.DataFrame(
 # VISUALIZAÇÃO DA MATRIZ
 # ============================================================
 
-with st.expander("📋 Visualizar matriz de decisão"):
+with st.expander(
+    "Visualizar matriz de decisão"
+):
 
     st.dataframe(
         df_base,
@@ -782,7 +770,7 @@ with st.expander("📋 Visualizar matriz de decisão"):
 st.markdown("---")
 
 if st.button(
-    "📊 EXECUTAR ANÁLISE COMPLETA"
+    "EXECUTAR ANÁLISE COMPLETA"
 ):
 
     # Verificar pesos
@@ -835,15 +823,13 @@ if st.button(
     # RESULTADO
     # ========================================================
 
-    st.balloons()
-
     st.success(
-        f"🏆 Melhor escolha: "
+        f"Melhor escolha: "
         f"**{ranking.iloc[0]['Alternativa']}**"
     )
 
     st.subheader(
-        "🏁 Ranking Final"
+        "Ranking Final"
     )
 
     st.dataframe(
@@ -860,7 +846,7 @@ if st.button(
     if api_key_input:
 
         with st.spinner(
-            "🤖 IA analisando os resultados..."
+            "IA analisando os resultados..."
         ):
 
             analise = gerar_analise_ia(
@@ -876,7 +862,7 @@ if st.button(
         ] = analise
 
         st.subheader(
-            "🤖 Relatório Interpretativo da IA"
+            "Relatório Interpretativo da IA"
         )
 
         st.markdown(
@@ -890,7 +876,7 @@ if st.button(
         ] = ""
 
         st.info(
-            "ℹ️ Insira sua OpenAI API Key na barra lateral "
+            "Insira sua OpenAI API Key na barra lateral "
             "para gerar o relatório interpretativo."
         )
 
@@ -899,7 +885,7 @@ if st.button(
     # ========================================================
 
     st.subheader(
-        "📂 Memória de Cálculo"
+        "Memória de Cálculo"
     )
 
     with st.expander(
@@ -948,7 +934,7 @@ if "resultado" in st.session_state:
     st.markdown("---")
 
     st.subheader(
-        "📥 Exportar Resultados"
+        "Exportar Resultados"
     )
 
     col1, col2 = st.columns(2)
@@ -963,7 +949,7 @@ if "resultado" in st.session_state:
         )
 
         st.download_button(
-            "📥 Baixar Ranking em CSV",
+            "Baixar Ranking em CSV",
             data=csv,
             file_name="ranking_topsis.csv",
             mime="text/csv",
@@ -986,7 +972,7 @@ if "resultado" in st.session_state:
         )
 
         st.download_button(
-            "📄 Baixar Relatório em PDF",
+            "Baixar Relatório em PDF",
             data=pdf_out,
             file_name="relatorio_topsis.pdf",
             mime="application/pdf",
