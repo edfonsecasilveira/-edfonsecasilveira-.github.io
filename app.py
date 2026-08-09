@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 from fpdf import FPDF
 import datetime
+from openai import OpenAI  # <-- Nova biblioteca para a IA
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(
@@ -38,7 +39,7 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # --- FUNÇÃO PARA GERAR PDF COMPLETO ---
-def gerar_pdf(ranking, matrizes, titulo):
+def gerar_pdf(ranking, matrizes, titulo, analise_ia=""):
     pdf = FPDF()
     pdf.add_page()
     
@@ -66,16 +67,71 @@ def gerar_pdf(ranking, matrizes, titulo):
         pdf.cell(100, 8, str(row['Alternativa']), 1)
         pdf.cell(40, 8, f"{row['Score TOPSIS']:.4f}", 1); pdf.ln()
     
-    pdf.ln(10)
+    # Incluir Análise da IA no PDF se existir
+    if analise_ia:
+        pdf.ln(5)
+        pdf.set_font("Helvetica", 'B', 12)
+        pdf.cell(0, 10, "2. Relatorio Interpretativo da IA", ln=True)
+        pdf.set_font("Helvetica", '', 10)
+        # Substitui caracteres que podem quebrar o FPDF padrão (latin-1)
+        texto_limpo = analise_ia.encode('latin-1', 'ignore').decode('latin-1')
+        pdf.multi_cell(0, 5, texto_limpo)
+    
+    pdf.ln(5)
     pdf.set_font("Helvetica", 'B', 12)
-    pdf.cell(0, 10, "2. Matrizes Intermediarias (Resumo)", ln=True)
+    pdf.cell(0, 10, "3. Matrizes Intermediarias (Resumo)", ln=True)
     pdf.set_font("Helvetica", '', 8)
     pdf.multi_cell(0, 5, "As matrizes de decisao normalizada, ponderada e as distancias euclidianas foram processadas conforme o rigor matematico do metodo TOPSIS.")
     
     return pdf.output(dest='S').encode('latin-1')
 
+# --- FUNÇÃO DA IA ---
+def gerar_analise_ia(api_key, ranking_df, pesos, criterios, tipos):
+    try:
+        client = OpenAI(api_key=api_key)
+        
+        # Monta um resumo do problema para enviar no Prompt
+        resumo_problema = f"Critérios avaliados: {', '.join(criterios)}\n"
+        resumo_problema += f"Pesos de cada critério: {pesos}\n"
+        resumo_problema += f"Tipos (lucro/custo): {tipos}\n\n"
+        resumo_problema += "Tabela de Classificação Final (Ranking):\n"
+        resumo_problema += ranking_df.to_string()
+
+        prompt = f"""
+        Você é um especialista em Análise de Decisão Multicritério (MCDA). 
+        Analise o seguinte resultado do método TOPSIS e forneça um relatório interpretativo curto, direto e acadêmico para o usuário.
+        
+        {resumo_problema}
+        
+        Escreva uma resposta estruturada contendo:
+        1. Justificativa do porquê a alternativa vencedora ficou em primeiro lugar com base nos pesos descritos.
+        2. Destaque rápido de qual critério foi o "divisor de águas" para essa escolha.
+        3. Um parágrafo de conclusão ou recomendação prática.
+        
+        Importante: Responda em português, use formatação Markdown simples e evite respostas muito longas. Não use emojis complexos ou caracteres especiais fora do padrão latino para não quebrar o PDF.
+        """
+        
+        # Chamada utilizando o modelo gpt-4o-mini (rápido e econômico)
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "Você é um assistente científico especialista em tomada de decisão matemática."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.3
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        return f"Erro ao conectar com a IA: {str(e)}"
+
 # --- SIDEBAR ---
 st.sidebar.image("https://portal.utfpr.edu.br/icones/cabecalho/logo-utfpr/@@images/image.png", width=180)
+st.sidebar.markdown("---")
+
+# Configuração da API Key na Sidebar
+st.sidebar.subheader("🤖 Configuração da IA")
+api_key_input = st.sidebar.text_input("Insira sua OpenAI API Key", type="password", help="Pegue sua chave no painel da OpenAI.")
+
 st.sidebar.markdown("---")
 st.sidebar.markdown(f"""
     <div class="sidebar-card">
@@ -103,7 +159,6 @@ cols = st.columns(qtd_c)
 for i in range(qtd_c):
     with cols[i]:
         n = st.text_input(f"C{i+1}", f"Critério {i+1}", key=f"nc_{i}")
-        # AJURTE 1: Permitir decimais com step 0.01 e formato float
         p = st.number_input(f"Peso C{i+1}", 0.0, 100.0, 1.0, step=0.01, format="%.2f", key=f"p_{i}")
         t = st.selectbox(f"Objetivo C{i+1}", ["lucro", "custo"], key=f"t_{i}")
         nomes_crit.append(n); pesos_brutos.append(p); tipos.append(t)
@@ -118,25 +173,18 @@ for j in range(qtd_a):
     nome_alt = row[0].text_input(f"Alternativa {j+1}", f"Opção {j+1}", key=f"alt_{j}")
     val_linha = [nome_alt]
     for i in range(qtd_c):
-        # AJURTE 2: Permitir decimais nos dados das alternativas
         v = row[i+1].number_input(f"{nomes_crit[i]}", value=0.0, step=0.01, format="%.2f", key=f"v_{j}_{i}")
         val_linha.append(v)
     dados.append(val_linha)
 
 df_base = pd.DataFrame(dados, columns=["Alternativa"] + nomes_crit)
 
-# --- ENGINE TOPSIS COM MATRIZES INTERMEDIÁRIAS ---
+# --- ENGINE TOPSIS ---
 def executar_topsis_completo(df, w, t):
-    # 1. Matriz Original
     matrix = df.drop(columns=['Alternativa']).values.astype(float)
-    
-    # 2. Normalização
     norm = matrix / np.sqrt((matrix**2).sum(axis=0) + 1e-9)
-    
-    # 3. Ponderação
     weighted = norm * w
     
-    # 4. Soluções Ideais
     v_pos, v_neg = [], []
     for i in range(len(t)):
         if t[i] == 'lucro':
@@ -146,14 +194,10 @@ def executar_topsis_completo(df, w, t):
             v_pos.append(np.min(weighted[:, i]))
             v_neg.append(np.max(weighted[:, i]))
     
-    # 5. Distâncias
     s_pos = np.sqrt(((weighted - v_pos)**2).sum(axis=1))
     s_neg = np.sqrt(((weighted - v_neg)**2).sum(axis=1))
-    
-    # 6. Score Final
     scores = s_neg / (s_pos + s_neg + 1e-9)
     
-    # Organizar dicionário de matrizes para o usuário ver
     intermediarias = {
         "Normalizada": pd.DataFrame(norm, columns=nomes_crit),
         "Ponderada": pd.DataFrame(weighted, columns=nomes_crit),
@@ -181,7 +225,19 @@ if st.button("📊 EXECUTAR ANÁLISE COMPLETA"):
     st.subheader("🏁 Ranking Final")
     st.dataframe(ranking.style.format({"Score TOPSIS": "{:.4f}"}), use_container_width=True)
 
-    # AJUSTE 3: Exibir Matrizes Intermediárias na Tela
+    # --- NOVA SEÇÃO: RELATÓRIO DA IA ---
+    if api_key_input:
+        with st.spinner("🤖 IA analisando os resultados matemáticos..."):
+            analise = gerar_analise_ia(api_key_input, ranking, pesos_brutos, nomes_crit, tipos)
+            st.session_state['analise_ia'] = analise
+            
+        st.subheader("🤖 Relatório Interpretativo da IA")
+        st.markdown(analise)
+    else:
+        st.session_state['analise_ia'] = ""
+        st.info("ℹ️ Adicione sua OpenAI API Key na barra lateral para gerar um relatório interpretativo automático via IA.")
+
+    # Exibir Matrizes Intermediárias
     with st.expander("📂 Ver Memória de Cálculo (Matrizes Intermediárias)"):
         st.write("**Matriz Normalizada**")
         st.dataframe(matrizes["Normalizada"])
@@ -189,18 +245,3 @@ if st.button("📊 EXECUTAR ANÁLISE COMPLETA"):
         st.dataframe(matrizes["Ponderada"])
         st.write("**Soluções Ideais**")
         st.dataframe(matrizes["Ideais"])
-        st.write("**Distâncias Euclidianas**")
-        st.dataframe(matrizes["Distâncias"])
-
-# --- DOWNLOADS ---
-if 'resultado' in st.session_state:
-    c_down1, c_down2 = st.columns(2)
-    with c_down1:
-        csv = st.session_state['resultado'].to_csv(index=False).encode('utf-8')
-        st.download_button("📥 Baixar CSV do Ranking", csv, "ranking.csv", "text/csv")
-    with c_down2:
-        pdf_out = gerar_pdf(st.session_state['resultado'], st.session_state['matrizes'], titulo_projeto)
-        st.download_button("📄 Baixar Relatório Completo (PDF)", pdf_out, "relatorio_topsis.pdf", "application/pdf")
-
-st.markdown("---")
-st.caption("Eduardo Fonseca Silveira | UTFPR 2026")
