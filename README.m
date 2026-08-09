@@ -441,15 +441,16 @@ def executar_topsis_completo(
     return scores, intermediarias
 
 
+```python
 # ============================================================
 # SIDEBAR
 # ============================================================
 
-st.sidebar.title("⚖️ TOPSIS")
+st.sidebar.title("TOPSIS")
 
 st.sidebar.markdown("---")
 
-st.sidebar.subheader("🤖 Inteligência Artificial")
+st.sidebar.subheader("Configuração da IA")
 
 api_key_input = st.sidebar.text_input(
     "OpenAI API Key",
@@ -463,7 +464,7 @@ st.sidebar.markdown(
     """
     <div class="sidebar-card">
 
-    <h4>📌 Iniciação Científica</h4>
+    <h4>Iniciação Científica</h4>
 
     <p>
     <b>Instituição:</b> UTFPR
@@ -484,6 +485,99 @@ st.sidebar.markdown(
     """,
     unsafe_allow_html=True
 )
+```
+
+E **adicione/substitua o CSS** no início do código por este:
+
+```python
+st.markdown("""
+<style>
+
+.main {
+    background-color: #f8f9fa;
+}
+
+/* Botões */
+.stButton > button {
+    width: 100%;
+    border-radius: 8px;
+    height: 3.5em;
+    background-color: #003d7a;
+    color: white;
+    font-weight: bold;
+}
+
+.stButton > button:hover {
+    background-color: #0056a6;
+    color: white;
+}
+
+/* Barra lateral */
+[data-testid="stSidebar"] {
+    background-color: #f0f2f6;
+}
+
+/* Textos da barra lateral */
+[data-testid="stSidebar"] p,
+[data-testid="stSidebar"] label,
+[data-testid="stSidebar"] span,
+[data-testid="stSidebar"] div {
+    color: #111111;
+}
+
+/* Títulos da barra lateral */
+[data-testid="stSidebar"] h1,
+[data-testid="stSidebar"] h2,
+[data-testid="stSidebar"] h3,
+[data-testid="stSidebar"] h4 {
+    color: #003d7a !important;
+}
+
+/* Campo da API Key */
+[data-testid="stSidebar"] input {
+    background-color: white !important;
+    color: #111111 !important;
+    border: 1px solid #999999 !important;
+}
+
+/* Texto dentro do campo */
+[data-testid="stSidebar"] input::placeholder {
+    color: #666666 !important;
+}
+
+/* Cartão de informações */
+.sidebar-card {
+    background-color: #ffffff;
+    padding: 15px;
+    border-radius: 10px;
+    border-left: 5px solid #003d7a;
+    margin-bottom: 20px;
+    box-shadow: 0px 2px 4px rgba(0,0,0,0.1);
+}
+
+.sidebar-card h4 {
+    color: #003d7a !important;
+    margin-top: 0;
+}
+
+.sidebar-card p,
+.sidebar-card b {
+    color: #222222 !important;
+    font-size: 14px;
+}
+
+</style>
+""", unsafe_allow_html=True)
+```
+
+Assim ficará:
+
+**Configuração da IA**
+
+`OpenAI API Key`
+`[ ••••••••••••••••• ]`
+
+com o texto **visível em preto**, fundo branco e **sem emojis**.
 
 
 # ============================================================
