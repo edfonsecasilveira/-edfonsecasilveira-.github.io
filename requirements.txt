@@ -1,6 +1,7 @@
-
+```txt
 streamlit
 pandas
 numpy
 fpdf2
 openai
+```
