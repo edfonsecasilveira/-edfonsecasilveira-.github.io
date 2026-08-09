@@ -19,113 +19,46 @@ st.set_page_config(
 
 
 # ============================================================
-# CSS
+# CSS SIMPLES
 # ============================================================
 
 st.markdown("""
 <style>
 
-/* ==========================================================
-   SIDEBAR
-   ========================================================== */
-
-[data-testid="stSidebar"] {
-    background-color: #f0f2f6 !important;
+.main {
+    background-color: #f8f9fa;
 }
-
-/* Força todos os textos da sidebar para escuro */
-[data-testid="stSidebar"] * {
-    color: #111111 !important;
-}
-
-/* Títulos */
-[data-testid="stSidebar"] h1,
-[data-testid="stSidebar"] h2,
-[data-testid="stSidebar"] h3,
-[data-testid="stSidebar"] h4 {
-    color: #003d7a !important;
-}
-
-/* Labels */
-[data-testid="stSidebar"] label {
-    color: #111111 !important;
-    font-weight: 600 !important;
-}
-
-/* Campo de texto */
-[data-testid="stSidebar"] input {
-    background-color: #ffffff !important;
-    color: #111111 !important;
-    border: 1px solid #777777 !important;
-    border-radius: 6px !important;
-}
-
-/* Texto digitado */
-[data-testid="stSidebar"] input[type="text"],
-[data-testid="stSidebar"] input[type="password"] {
-    color: #111111 !important;
-    background-color: #ffffff !important;
-}
-
-/* Placeholder */
-[data-testid="stSidebar"] input::placeholder {
-    color: #555555 !important;
-    opacity: 1 !important;
-}
-
-/* Texto de ajuda */
-[data-testid="stSidebar"] small {
-    color: #333333 !important;
-}
-
-
-/* ==========================================================
-   CARTÃO DA SIDEBAR
-   ========================================================== */
-
-.sidebar-card {
-    background-color: #ffffff !important;
-    padding: 15px;
-    border-radius: 10px;
-    border-left: 5px solid #003d7a;
-    margin-bottom: 20px;
-    box-shadow: 0px 2px 4px rgba(0,0,0,0.1);
-}
-
-.sidebar-card * {
-    color: #222222 !important;
-}
-
-.sidebar-card h4 {
-    color: #003d7a !important;
-}
-
-
-/* ==========================================================
-   BOTÕES
-   ========================================================== */
 
 .stButton > button {
     width: 100%;
     border-radius: 8px;
     height: 3.5em;
     background-color: #003d7a;
-    color: white !important;
+    color: white;
     font-weight: bold;
 }
 
 .stButton > button:hover {
     background-color: #0056a6;
-    color: white !important;
+    color: white;
 }
 
+.sidebar-card {
+    background-color: white;
+    padding: 15px;
+    border-radius: 10px;
+    border-left: 5px solid #003d7a;
+    margin-bottom: 20px;
+}
 
-/* ==========================================================
-   GERAL
-   ========================================================== */
+.sidebar-card h4 {
+    color: #003d7a;
+    margin-top: 0;
+}
 
-.main {
-    background-color: #f8f9fa;
+.sidebar-card p {
+    color: #222222;
+    font-size: 14px;
 }
 
 </style>
@@ -136,7 +69,7 @@ st.markdown("""
 # FUNÇÃO PARA GERAR PDF
 # ============================================================
 
-def gerar_pdf(ranking, matrizes, titulo, analise_ia=""):
+def gerar_pdf(ranking, titulo, analise_ia=""):
 
     pdf = FPDF()
     pdf.add_page()
@@ -175,7 +108,7 @@ def gerar_pdf(ranking, matrizes, titulo, analise_ia=""):
     pdf.cell(
         0,
         7,
-        f"Academico: Eduardo Fonseca Silveira | "
+        "Academico: Eduardo Fonseca Silveira | "
         f"Data: {datetime.datetime.now().strftime('%d/%m/%Y')}",
         ln=True
     )
@@ -235,6 +168,7 @@ def gerar_pdf(ranking, matrizes, titulo, analise_ia=""):
         pdf.ln(5)
 
         pdf.set_font("Helvetica", "B", 12)
+
         pdf.cell(
             0,
             10,
@@ -266,6 +200,7 @@ def gerar_pdf(ranking, matrizes, titulo, analise_ia=""):
     pdf.ln(5)
 
     pdf.set_font("Helvetica", "B", 12)
+
     pdf.cell(
         0,
         10,
@@ -287,7 +222,7 @@ def gerar_pdf(ranking, matrizes, titulo, analise_ia=""):
 
 
 # ============================================================
-# FUNÇÃO DA INTELIGÊNCIA ARTIFICIAL
+# FUNÇÃO DA IA
 # ============================================================
 
 def gerar_analise_ia(
@@ -304,30 +239,30 @@ def gerar_analise_ia(
             api_key=api_key
         )
 
-        resumo_problema = (
+        resumo = (
             f"Critérios avaliados: {', '.join(criterios)}\n"
         )
 
-        resumo_problema += (
+        resumo += (
             f"Pesos dos critérios: {pesos}\n"
         )
 
-        resumo_problema += (
+        resumo += (
             f"Tipos dos critérios: {tipos}\n\n"
         )
 
-        resumo_problema += (
+        resumo += (
             "Ranking final:\n"
         )
 
-        resumo_problema += ranking_df.to_string()
+        resumo += ranking_df.to_string()
 
         prompt = f"""
 Você é um especialista em Análise de Decisão Multicritério (MCDA).
 
-Analise os resultados do método TOPSIS apresentados abaixo.
+Analise os resultados do método TOPSIS abaixo.
 
-{resumo_problema}
+{resumo}
 
 Produza um relatório interpretativo curto, direto e acadêmico.
 
@@ -371,16 +306,14 @@ Não utilize emojis.
 
     except Exception as e:
 
-        return (
-            f"Erro ao conectar com a IA: {str(e)}"
-        )
+        return f"Erro ao conectar com a IA: {str(e)}"
 
 
 # ============================================================
 # ENGINE TOPSIS
 # ============================================================
 
-def executar_topsis_completo(
+def executar_topsis(
     df,
     pesos,
     tipos,
@@ -394,12 +327,14 @@ def executar_topsis_completo(
         .astype(float)
     )
 
-    # Normalização
+    # --------------------------------------------------------
+    # NORMALIZAÇÃO
+    # --------------------------------------------------------
+
     denominador = np.sqrt(
         (matriz ** 2).sum(axis=0)
     )
 
-    # Evita divisão por zero
     denominador[
         denominador == 0
     ] = 1
@@ -408,26 +343,33 @@ def executar_topsis_completo(
         matriz / denominador
     )
 
-    # Aplicação dos pesos
+    # --------------------------------------------------------
+    # PONDERAÇÃO
+    # --------------------------------------------------------
+
     ponderada = (
-        normalizada * np.array(pesos)
+        normalizada *
+        np.array(pesos)
     )
 
-    # Soluções ideais
-    v_pos = []
-    v_neg = []
+    # --------------------------------------------------------
+    # SOLUÇÕES IDEAL E ANTI-IDEAL
+    # --------------------------------------------------------
+
+    ideal = []
+    anti_ideal = []
 
     for i in range(len(tipos)):
 
         if tipos[i] == "lucro":
 
-            v_pos.append(
+            ideal.append(
                 np.max(
                     ponderada[:, i]
                 )
             )
 
-            v_neg.append(
+            anti_ideal.append(
                 np.min(
                     ponderada[:, i]
                 )
@@ -435,41 +377,53 @@ def executar_topsis_completo(
 
         else:
 
-            v_pos.append(
+            ideal.append(
                 np.min(
                     ponderada[:, i]
                 )
             )
 
-            v_neg.append(
+            anti_ideal.append(
                 np.max(
                     ponderada[:, i]
                 )
             )
 
-    v_pos = np.array(v_pos)
-    v_neg = np.array(v_neg)
+    ideal = np.array(ideal)
+    anti_ideal = np.array(anti_ideal)
 
-    # Distância ao ideal
-    s_pos = np.sqrt(
-        ((ponderada - v_pos) ** 2)
+    # --------------------------------------------------------
+    # DISTÂNCIAS
+    # --------------------------------------------------------
+
+    distancia_ideal = np.sqrt(
+        ((ponderada - ideal) ** 2)
         .sum(axis=1)
     )
 
-    # Distância ao anti-ideal
-    s_neg = np.sqrt(
-        ((ponderada - v_neg) ** 2)
+    distancia_anti = np.sqrt(
+        ((ponderada - anti_ideal) ** 2)
         .sum(axis=1)
     )
 
-    # Score TOPSIS
+    # --------------------------------------------------------
+    # SCORE TOPSIS
+    # --------------------------------------------------------
+
     scores = (
-        s_neg /
-        (s_pos + s_neg + 1e-12)
+        distancia_anti /
+        (
+            distancia_ideal +
+            distancia_anti +
+            1e-12
+        )
     )
 
-    # Matrizes intermediárias
-    intermediarias = {
+    # --------------------------------------------------------
+    # MATRIZES
+    # --------------------------------------------------------
+
+    matrizes = {
 
         "Normalizada":
             pd.DataFrame(
@@ -485,7 +439,7 @@ def executar_topsis_completo(
 
         "Ideais":
             pd.DataFrame(
-                [v_pos, v_neg],
+                [ideal, anti_ideal],
                 columns=nomes_criterios,
                 index=[
                     "Ideal (+)",
@@ -495,12 +449,12 @@ def executar_topsis_completo(
 
         "Distâncias":
             pd.DataFrame({
-                "S+ (Ideal)": s_pos,
-                "S- (Anti-Ideal)": s_neg
+                "S+ (Ideal)": distancia_ideal,
+                "S- (Anti-Ideal)": distancia_anti
             })
     }
 
-    return scores, intermediarias
+    return scores, matrizes
 
 
 # ============================================================
@@ -511,16 +465,18 @@ st.sidebar.title("TOPSIS")
 
 st.sidebar.markdown("---")
 
-st.sidebar.subheader("Configuração da IA")
+st.sidebar.subheader(
+    "Configuração da IA"
+)
 
-# Texto separado do campo para garantir visibilidade
+# Texto separado do campo
 st.sidebar.markdown(
     """
     <p style="
-        color: #111111 !important;
-        font-weight: 600 !important;
-        font-size: 14px !important;
-        margin-bottom: 5px !important;
+        color: #111111;
+        font-weight: 600;
+        font-size: 14px;
+        margin-bottom: 5px;
     ">
         OpenAI API Key
     </p>
@@ -528,12 +484,12 @@ st.sidebar.markdown(
     unsafe_allow_html=True
 )
 
-# Campo da API Key sem label padrão
+# Campo da API
 api_key_input = st.sidebar.text_input(
-    "OpenAI API Key",
+    "API Key",
     type="password",
-    label_visibility="collapsed",
-    placeholder="Cole sua chave aqui"
+    placeholder="Cole sua chave aqui",
+    label_visibility="collapsed"
 )
 
 st.sidebar.markdown("---")
@@ -581,7 +537,7 @@ st.write(
 
 
 # ============================================================
-# CONFIGURAÇÕES INICIAIS
+# CONFIGURAÇÕES
 # ============================================================
 
 with st.expander(
@@ -666,7 +622,7 @@ for i in range(qtd_c):
 
 
 # ============================================================
-# NORMALIZAÇÃO DOS PESOS
+# PESOS NORMALIZADOS
 # ============================================================
 
 soma_pesos = sum(
@@ -688,8 +644,9 @@ else:
     ]
 
 
-# Mostrar pesos
-with st.expander("Ver pesos normalizados"):
+with st.expander(
+    "Ver pesos normalizados"
+):
 
     pesos_df = pd.DataFrame({
         "Critério": nomes_crit,
@@ -750,7 +707,7 @@ df_base = pd.DataFrame(
 
 
 # ============================================================
-# VISUALIZAÇÃO DA MATRIZ
+# VISUALIZAR MATRIZ
 # ============================================================
 
 with st.expander(
@@ -764,7 +721,7 @@ with st.expander(
 
 
 # ============================================================
-# EXECUTAR ANÁLISE
+# EXECUTAR
 # ============================================================
 
 st.markdown("---")
@@ -782,7 +739,7 @@ if st.button(
 
         st.stop()
 
-    # Verificar nomes
+    # Verificar critérios repetidos
     if len(set(nomes_crit)) != len(nomes_crit):
 
         st.error(
@@ -791,8 +748,8 @@ if st.button(
 
         st.stop()
 
-    # Executar TOPSIS
-    scores, matrizes = executar_topsis_completo(
+    # TOPSIS
+    scores, matrizes = executar_topsis(
         df_base,
         pesos_norm,
         tipos,
@@ -813,9 +770,7 @@ if st.button(
         .reset_index(drop=True)
     )
 
-    ranking.index += 1
-
-    # Salvar sessão
+    # Salvar na sessão
     st.session_state["resultado"] = ranking
     st.session_state["matrizes"] = matrizes
 
@@ -881,7 +836,7 @@ if st.button(
         )
 
     # ========================================================
-    # MATRIZES INTERMEDIÁRIAS
+    # MEMÓRIA DE CÁLCULO
     # ========================================================
 
     st.subheader(
@@ -966,7 +921,6 @@ if "resultado" in st.session_state:
 
         pdf_out = gerar_pdf(
             st.session_state["resultado"],
-            st.session_state["matrizes"],
             titulo_projeto,
             analise_ia=texto_ia
         )
