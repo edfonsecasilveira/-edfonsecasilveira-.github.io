@@ -1,7 +1,5 @@
-```txt
-streamlit
+streamlit==1.60.0
 pandas
 numpy
 fpdf2
 openai
-```
